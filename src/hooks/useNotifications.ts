@@ -31,16 +31,30 @@ export function useNotifications() {
 
       const { data, error } = await supabase
         .from('notifications')
-        .select(`
-          *,
-          actor:profiles!notifications_actor_id_fkey (id, username, display_name, avatar_url)
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      return (data || []) as unknown as NotificationWithActor[];
+
+      // Fetch actor profiles separately
+      const withActors = await Promise.all(
+        (data || []).map(async (notif: any) => {
+          const { data: actor } = await supabase
+            .from('profiles')
+            .select('id, username, display_name, avatar_url')
+            .eq('id', notif.actor_id)
+            .maybeSingle();
+
+          return {
+            ...notif,
+            actor: actor || { id: notif.actor_id, username: 'unknown', display_name: 'Unknown', avatar_url: null },
+          } as NotificationWithActor;
+        })
+      );
+
+      return withActors;
     },
     enabled: !!user,
   });
