@@ -4,22 +4,25 @@ import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, ArrowRightLeft 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SkillPost } from '@/types';
+import { PostWithProfile } from '@/hooks/usePosts';
+import { useToggleLike } from '@/hooks/usePosts';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface SkillPostCardProps {
-  post: SkillPost;
+  post: PostWithProfile;
   index?: number;
 }
 
 export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
-  const [isLiked, setIsLiked] = useState(post.isLiked);
-  const [likesCount, setLikesCount] = useState(post.likesCount);
+  const { user } = useAuth();
+  const toggleLike = useToggleLike();
   const [isSaved, setIsSaved] = useState(false);
 
   const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
+    if (!user) return;
+    toggleLike.mutate({ postId: post.id, userId: user.id, isLiked: post.is_liked });
   };
 
   return (
@@ -29,16 +32,16 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4">
-        <Link to={`/user/${post.user.username}`} className="flex items-center gap-3">
+        <Link to={`/user/${post.profiles.username}`} className="flex items-center gap-3">
           <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-            <AvatarImage src={post.user.avatar} alt={post.user.displayName} />
-            <AvatarFallback>{post.user.displayName[0]}</AvatarFallback>
+            <AvatarImage src={post.profiles.avatar_url || ''} alt={post.profiles.display_name} />
+            <AvatarFallback>{post.profiles.display_name[0]}</AvatarFallback>
           </Avatar>
           <div>
             <p className="font-semibold hover:text-primary transition-colors">
-              {post.user.displayName}
+              {post.profiles.display_name}
             </p>
-            <p className="text-sm text-muted-foreground">@{post.user.username}</p>
+            <p className="text-sm text-muted-foreground">@{post.profiles.username}</p>
           </div>
         </Link>
         <Button variant="ghost" size="icon" className="rounded-full">
@@ -50,21 +53,21 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
       <div className="px-4 pb-3">
         <div className="flex items-center gap-2 p-3 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10">
           <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
-            {post.skillOffered}
+            {post.skill_offered}
           </Badge>
           <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
           <Badge variant="secondary" className="bg-accent/20 text-accent border-0">
-            {post.skillWanted}
+            {post.skill_wanted}
           </Badge>
         </div>
       </div>
 
       {/* Image */}
-      {post.image && (
+      {post.image_url && (
         <div className="aspect-[4/3] overflow-hidden">
           <img
-            src={post.image}
-            alt={`${post.skillOffered} skill`}
+            src={post.image_url}
+            alt={`${post.skill_offered} skill`}
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           />
         </div>
@@ -78,11 +81,12 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
             size="icon"
             className="rounded-full"
             onClick={handleLike}
+            disabled={!user}
           >
             <Heart
               className={cn(
                 "h-6 w-6 transition-all",
-                isLiked && "fill-accent text-accent scale-110"
+                post.is_liked && "fill-accent text-accent scale-110"
               )}
             />
           </Button>
@@ -110,18 +114,18 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
 
       {/* Content */}
       <div className="px-4 pb-4">
-        <p className="font-semibold mb-1">{likesCount.toLocaleString()} likes</p>
+        <p className="font-semibold mb-1">{post.likes_count.toLocaleString()} likes</p>
         <p className="text-sm">
-          <Link to={`/user/${post.user.username}`} className="font-semibold hover:text-primary">
-            {post.user.username}
+          <Link to={`/user/${post.profiles.username}`} className="font-semibold hover:text-primary">
+            {post.profiles.username}
           </Link>{' '}
           {post.description}
         </p>
         <button className="text-sm text-muted-foreground mt-2 hover:text-foreground transition-colors">
-          View all {post.commentsCount} comments
+          View all {post.comments_count} comments
         </button>
         <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide">
-          {post.createdAt}
+          {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
         </p>
       </div>
     </article>

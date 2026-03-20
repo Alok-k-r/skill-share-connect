@@ -4,27 +4,41 @@ import { Layout } from '@/components/layout/Layout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { messages, currentUser } from '@/data/mockData';
+import { useConversations, useMessages, useSendMessage, ConversationWithProfile } from '@/hooks/useConversations';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { Message } from '@/types';
-
-const chatMessages = [
-  { id: '1', senderId: '2', text: 'Hey! I saw your piano teaching post. I\'d love to exchange skills!', time: '10:30 AM' },
-  { id: '2', senderId: '1', text: 'That sounds great! I\'m definitely interested in learning web development.', time: '10:32 AM' },
-  { id: '3', senderId: '2', text: 'Perfect! I can teach you React and JavaScript. When would you like to start?', time: '10:35 AM' },
-  { id: '4', senderId: '1', text: 'How about this weekend? We could do a 1-hour exchange session.', time: '10:38 AM' },
-  { id: '5', senderId: '2', text: 'That sounds great! When would you like to start?', time: '10:40 AM' },
-];
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Messages() {
-  const [selectedConversation, setSelectedConversation] = useState<Message | null>(null);
+  const { user } = useAuth();
+  const { data: conversations, isLoading } = useConversations();
+  const [selectedConversation, setSelectedConversation] = useState<ConversationWithProfile | null>(null);
+  const { data: chatMessages } = useMessages(selectedConversation?.id);
+  const sendMessage = useSendMessage();
   const [newMessage, setNewMessage] = useState('');
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !selectedConversation || !user) return;
+    sendMessage.mutate({
+      conversationId: selectedConversation.id,
+      senderId: user.id,
+      content: newMessage.trim(),
+    });
     setNewMessage('');
   };
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-12 text-center">
+          <h1 className="text-2xl font-bold mb-2">Not logged in</h1>
+          <p className="text-muted-foreground">Sign in to view your messages</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -34,7 +48,6 @@ export default function Messages() {
           "w-full md:w-80 lg:w-96 border-r bg-card flex flex-col",
           selectedConversation && "hidden md:flex"
         )}>
-          {/* Header */}
           <div className="p-4 border-b">
             <h1 className="text-xl font-bold mb-4">Messages</h1>
             <div className="relative">
@@ -43,37 +56,54 @@ export default function Messages() {
             </div>
           </div>
 
-          {/* Conversations */}
           <div className="flex-1 overflow-y-auto">
-            {messages.map((message) => (
-              <button
-                key={message.id}
-                onClick={() => setSelectedConversation(message)}
-                className={cn(
-                  "w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors text-left",
-                  selectedConversation?.id === message.id && "bg-muted"
-                )}
-              >
-                <div className="relative">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={message.user.avatar} alt={message.user.displayName} />
-                    <AvatarFallback>{message.user.displayName[0]}</AvatarFallback>
-                  </Avatar>
-                  {message.unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full gradient-primary text-xs text-primary-foreground flex items-center justify-center font-medium">
-                      {message.unreadCount}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold truncate">{message.user.displayName}</p>
-                    <span className="text-xs text-muted-foreground">{message.createdAt}</span>
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-full" />
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">{message.lastMessage}</p>
                 </div>
-              </button>
-            ))}
+              ))
+            ) : conversations && conversations.length > 0 ? (
+              conversations.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => setSelectedConversation(conv)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors text-left",
+                    selectedConversation?.id === conv.id && "bg-muted"
+                  )}
+                >
+                  <div className="relative">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={conv.other_user.avatar_url || ''} alt={conv.other_user.display_name} />
+                      <AvatarFallback>{conv.other_user.display_name[0]}</AvatarFallback>
+                    </Avatar>
+                    {conv.unread_count > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full gradient-primary text-xs text-primary-foreground flex items-center justify-center font-medium">
+                        {conv.unread_count}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold truncate">{conv.other_user.display_name}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">{conv.last_message}</p>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                No conversations yet
+              </div>
+            )}
           </div>
         </div>
 
@@ -84,7 +114,6 @@ export default function Messages() {
         )}>
           {selectedConversation ? (
             <>
-              {/* Chat Header */}
               <div className="flex items-center justify-between p-4 border-b bg-card">
                 <div className="flex items-center gap-3">
                   <Button
@@ -96,53 +125,38 @@ export default function Messages() {
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={selectedConversation.user.avatar} alt={selectedConversation.user.displayName} />
-                    <AvatarFallback>{selectedConversation.user.displayName[0]}</AvatarFallback>
+                    <AvatarImage src={selectedConversation.other_user.avatar_url || ''} alt={selectedConversation.other_user.display_name} />
+                    <AvatarFallback>{selectedConversation.other_user.display_name[0]}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold">{selectedConversation.user.displayName}</p>
-                    <p className="text-sm text-muted-foreground">@{selectedConversation.user.username}</p>
+                    <p className="font-semibold">{selectedConversation.other_user.display_name}</p>
+                    <p className="text-sm text-muted-foreground">@{selectedConversation.other_user.username}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon">
-                    <Phone className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon">
-                    <Video className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-5 w-5" />
-                  </Button>
+                  <Button variant="ghost" size="icon"><Phone className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon"><Video className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
                 </div>
               </div>
 
-              {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {chatMessages.map((msg) => {
-                  const isCurrentUser = msg.senderId === '1';
+                {chatMessages?.map((msg) => {
+                  const isCurrentUser = msg.sender_id === user.id;
                   return (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "flex",
-                        isCurrentUser ? "justify-end" : "justify-start"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "max-w-[70%] rounded-2xl px-4 py-2",
-                          isCurrentUser
-                            ? "gradient-primary text-primary-foreground rounded-br-sm"
-                            : "bg-muted rounded-bl-sm"
-                        )}
-                      >
-                        <p className="text-sm">{msg.text}</p>
+                    <div key={msg.id} className={cn("flex", isCurrentUser ? "justify-end" : "justify-start")}>
+                      <div className={cn(
+                        "max-w-[70%] rounded-2xl px-4 py-2",
+                        isCurrentUser
+                          ? "gradient-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted rounded-bl-sm"
+                      )}>
+                        <p className="text-sm">{msg.content}</p>
                         <p className={cn(
                           "text-xs mt-1",
                           isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
                         )}>
-                          {msg.time}
+                          {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                         </p>
                       </div>
                     </div>
@@ -150,7 +164,6 @@ export default function Messages() {
                 })}
               </div>
 
-              {/* Message Input */}
               <form onSubmit={handleSendMessage} className="p-4 border-t bg-card">
                 <div className="flex items-center gap-3">
                   <Input
@@ -159,7 +172,7 @@ export default function Messages() {
                     onChange={(e) => setNewMessage(e.target.value)}
                     className="flex-1"
                   />
-                  <Button type="submit" variant="gradient" size="icon">
+                  <Button type="submit" variant="gradient" size="icon" disabled={sendMessage.isPending}>
                     <Send className="h-5 w-5" />
                   </Button>
                 </div>
@@ -172,9 +185,7 @@ export default function Messages() {
                   <Send className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Your Messages</h2>
-                <p className="text-muted-foreground">
-                  Select a conversation to start messaging
-                </p>
+                <p className="text-muted-foreground">Select a conversation to start messaging</p>
               </div>
             </div>
           )}

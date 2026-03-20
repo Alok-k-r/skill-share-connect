@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SkillPostCard } from '@/components/posts/SkillPostCard';
 import { UserCard } from '@/components/users/UserCard';
-import { skillPosts, users } from '@/data/mockData';
+import { usePosts } from '@/hooks/usePosts';
+import { useProfiles } from '@/hooks/useProfiles';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const popularSkills = [
   'JavaScript', 'Photography', 'Piano', 'Spanish', 'Yoga', 
@@ -17,11 +19,30 @@ const popularSkills = [
 export default function Explore() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const { data: posts, isLoading: postsLoading } = usePosts();
+  const { data: profiles, isLoading: profilesLoading } = useProfiles();
+
+  const filteredPosts = posts?.filter(post => {
+    const matchesSearch = !searchQuery || 
+      post.skill_offered.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.skill_wanted.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSkill = !selectedSkill ||
+      post.skill_offered.toLowerCase().includes(selectedSkill.toLowerCase()) ||
+      post.skill_wanted.toLowerCase().includes(selectedSkill.toLowerCase());
+    return matchesSearch && matchesSkill;
+  });
+
+  const filteredProfiles = profiles?.filter(profile => {
+    if (!searchQuery) return true;
+    return profile.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.skills_teaching.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+  });
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-6">
-        {/* Header */}
         <div className="mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold mb-2">Explore Skills</h1>
           <p className="text-muted-foreground">
@@ -29,7 +50,6 @@ export default function Explore() {
           </p>
         </div>
 
-        {/* Search */}
         <div className="flex gap-3 mb-6 animate-slide-up">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -45,7 +65,6 @@ export default function Explore() {
           </Button>
         </div>
 
-        {/* Popular Skills */}
         <div className="mb-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <h2 className="text-sm font-semibold text-muted-foreground mb-3">Popular Skills</h2>
           <div className="flex flex-wrap gap-2">
@@ -62,7 +81,6 @@ export default function Explore() {
           </div>
         </div>
 
-        {/* Tabs */}
         <Tabs defaultValue="posts" className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <TabsList className="mb-6">
             <TabsTrigger value="posts">Skill Posts</TabsTrigger>
@@ -70,19 +88,43 @@ export default function Explore() {
           </TabsList>
 
           <TabsContent value="posts" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {skillPosts.map((post, index) => (
-                <SkillPostCard key={post.id} post={post} index={index} />
-              ))}
-            </div>
+            {postsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-64 rounded-2xl" />
+                ))}
+              </div>
+            ) : filteredPosts && filteredPosts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredPosts.map((post, index) => (
+                  <SkillPostCard key={post.id} post={post} index={index} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                No posts found
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="people" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {users.map((user) => (
-                <UserCard key={user.id} user={user} />
-              ))}
-            </div>
+            {profilesLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-48 rounded-2xl" />
+                ))}
+              </div>
+            ) : filteredProfiles && filteredProfiles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredProfiles.map((profile) => (
+                  <UserCard key={profile.id} profile={profile} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                No people found
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
