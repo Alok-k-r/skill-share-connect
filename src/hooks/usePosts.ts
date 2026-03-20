@@ -72,18 +72,16 @@ export function useUserPosts(userId: string | undefined) {
 
       const { data: posts, error } = await supabase
         .from('posts')
-        .select(`
-          *,
-          profiles!posts_user_id_fkey (id, username, display_name, avatar_url)
-        `)
+        .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const postsWithCounts = await Promise.all(
-        (posts || []).map(async (post) => {
-          const [likesRes, commentsRes, isLikedRes] = await Promise.all([
+        (posts || []).map(async (post: any) => {
+          const [profileRes, likesRes, commentsRes, isLikedRes] = await Promise.all([
+            supabase.from('profiles').select('id, username, display_name, avatar_url').eq('id', post.user_id).maybeSingle(),
             supabase.from('likes').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
             supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
             user
@@ -93,6 +91,7 @@ export function useUserPosts(userId: string | undefined) {
 
           return {
             ...post,
+            profiles: profileRes.data || { id: post.user_id, username: 'unknown', display_name: 'Unknown', avatar_url: null },
             likes_count: likesRes.count || 0,
             comments_count: commentsRes.count || 0,
             is_liked: !!isLikedRes.data,
