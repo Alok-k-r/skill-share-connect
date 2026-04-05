@@ -10,6 +10,7 @@ interface Profile {
   bio: string;
   skills_teaching: string[];
   skills_learning: string[];
+
   created_at: string;
   updated_at: string;
 }
@@ -42,7 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', userId)
       .maybeSingle();
-    setProfile(data);
+    if (data) {
+      setProfile({
+        ...data,
+        bio: data.bio || '',
+        skills_teaching: data.skills_teaching || [],
+        skills_learning: data.skills_learning || [],
+      });
+    } else {
+      setProfile(null);
+    }
   };
 
   useEffect(() => {
