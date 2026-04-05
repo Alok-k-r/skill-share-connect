@@ -43,7 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', userId)
       .maybeSingle();
-    setProfile(data);
+    if (data) {
+      setProfile({
+        ...data,
+        bio: data.bio || '',
+        skills_teaching: data.skills_teaching || [],
+        skills_learning: data.skills_learning || [],
+      });
+    } else {
+      setProfile(null);
+    }
   };
 
   useEffect(() => {
