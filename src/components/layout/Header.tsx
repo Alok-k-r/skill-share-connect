@@ -9,6 +9,7 @@ import { CreatePostModal } from '@/components/posts/CreatePostModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
+import { LogOut } from 'lucide-react';
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -16,7 +17,7 @@ export function Header() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const location = useLocation();
-  const { profile } = useAuth();
+  const { profile, user, signOut } = useAuth();
   const { data: notifications } = useNotifications();
 
   const unreadCount = notifications?.filter(n => !n.is_read).length || 0;
@@ -41,42 +42,54 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant="icon" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
-                <Search className="h-5 w-5" />
-              </Button>
+              {user ? (
+                <>
+                  <Button variant="icon" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+                    <Search className="h-5 w-5" />
+                  </Button>
 
-              <Button variant="icon" size="icon" onClick={() => setIsCreateModalOpen(true)} className="hidden sm:flex">
-                <PlusSquare className="h-5 w-5" />
-              </Button>
+                  <Button variant="icon" size="icon" onClick={() => setIsCreateModalOpen(true)} className="hidden sm:flex">
+                    <PlusSquare className="h-5 w-5" />
+                  </Button>
 
-              <Link to="/messages">
-                <Button variant="icon" size="icon">
-                  <MessageCircle className="h-5 w-5" />
-                </Button>
-              </Link>
+                  <Link to="/messages">
+                    <Button variant="icon" size="icon">
+                      <MessageCircle className="h-5 w-5" />
+                    </Button>
+                  </Link>
 
-              <div className="relative">
-                <Button variant="icon" size="icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
-                  <Bell className="h-5 w-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full gradient-primary text-xs text-primary-foreground flex items-center justify-center font-medium">
-                      {unreadCount}
-                    </span>
-                  )}
-                </Button>
-                <NotificationDropdown isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
-              </div>
+                  <div className="relative">
+                    <Button variant="icon" size="icon" onClick={() => setIsNotificationOpen(!isNotificationOpen)}>
+                      <Bell className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full gradient-primary text-xs text-primary-foreground flex items-center justify-center font-medium">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                    <NotificationDropdown isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
+                  </div>
 
-              <Link to="/profile">
-                <Avatar className="h-9 w-9 ring-2 ring-primary/20 transition-all hover:ring-primary/40">
-                  <AvatarImage src={profile?.avatar_url || ''} alt={profile?.display_name || ''} />
-                  <AvatarFallback>{profile?.display_name?.[0] || '?'}</AvatarFallback>
-                </Avatar>
-              </Link>
+                  <Link to="/profile">
+                    <Avatar className="h-9 w-9 ring-2 ring-primary/20 transition-all hover:ring-primary/40">
+                      <AvatarImage src={profile?.avatar_url || ''} alt={profile?.display_name || ''} />
+                      <AvatarFallback>{profile?.display_name?.[0] || '?'}</AvatarFallback>
+                    </Avatar>
+                  </Link>
 
-              <Button variant="icon" size="icon" className="sm:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </Button>
+                  <Button variant="icon" size="icon" onClick={signOut} title="Sign out">
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+
+                  <Button variant="icon" size="icon" className="sm:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                    {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  </Button>
+                </>
+              ) : (
+                <Link to="/auth">
+                  <Button variant="gradient" size="sm">Sign In</Button>
+                </Link>
+              )}
             </div>
           </div>
 
