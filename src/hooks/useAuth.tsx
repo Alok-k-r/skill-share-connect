@@ -10,6 +10,7 @@ interface Profile {
   bio: string;
   skills_teaching: string[];
   skills_learning: string[];
+
   created_at: string;
   updated_at: string;
 }
