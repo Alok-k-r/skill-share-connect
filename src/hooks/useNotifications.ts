@@ -63,8 +63,15 @@ export function useNotifications() {
   useEffect(() => {
     if (!user) return;
 
+    const channelName = `notifications-realtime-${user.id}`;
+    // Remove any existing channel with this name first
+    const existing = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
+    if (existing) {
+      supabase.removeChannel(existing);
+    }
+
     const channel = supabase
-      .channel('notifications-realtime')
+      .channel(channelName)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -76,7 +83,7 @@ export function useNotifications() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, queryClient]);
+  }, [user?.id, queryClient]);
 
   return query;
 }
