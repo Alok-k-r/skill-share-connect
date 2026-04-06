@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export interface NotificationWithActor {
   id: string;
@@ -23,6 +23,7 @@ export interface NotificationWithActor {
 export function useNotifications() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const query = useQuery({
     queryKey: ['notifications'],
@@ -38,40 +39,38 @@ export function useNotifications() {
 
       if (error) throw error;
 
-      // Fetch actor profiles separately
-      const withActors = await Promise.all(
-        (data || []).map(async (notif: any) => {
-          const { data: actor } = await supabase
-            .from('profiles')
-            .select('id, username, display_name, avatar_url')
-            .eq('id', notif.actor_id)
-            .maybeSingle();
+      const actorIds = [...new Set((data || []).map((n: any) => n.actor_id))];
+      const { data: actors } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', actorIds);
 
-          return {
-            ...notif,
-            actor: actor || { id: notif.actor_id, username: 'unknown', display_name: 'Unknown', avatar_url: null },
-          } as NotificationWithActor;
-        })
-      );
+      const actorMap = new Map((actors || []).map(a => [a.id, a]));
 
-      return withActors;
+      return (data || []).map((notif: any) => ({
+        ...notif,
+        actor: actorMap.get(notif.actor_id) || {
+          id: notif.actor_id,
+          username: 'unknown',
+          display_name: 'Unknown',
+          avatar_url: null,
+        },
+      })) as NotificationWithActor[];
     },
     enabled: !!user,
   });
 
-  // Realtime subscription
   useEffect(() => {
     if (!user) return;
 
-    const channelName = `notifications-realtime-${user.id}`;
-    // Remove any existing channel with this name first
-    const existing = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
-    if (existing) {
-      supabase.removeChannel(existing);
+    // Clean up any existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     const channel = supabase
-      .channel(channelName)
+      .channel(`notif-${user.id}-${Date.now()}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -82,7 +81,14 @@ export function useNotifications() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [user?.id, queryClient]);
 
   return query;

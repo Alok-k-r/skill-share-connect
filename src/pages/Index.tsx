@@ -24,7 +24,7 @@ export default function Index() {
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16 ring-4 ring-primary/20">
                     <AvatarImage src={profile.avatar_url || ''} alt={profile.display_name} />
-                    <AvatarFallback>{profile.display_name[0]}</AvatarFallback>
+                    <AvatarFallback>{profile.display_name?.[0] || '?'}</AvatarFallback>
                   </Avatar>
                   <div>
                     <h1 className="text-2xl font-bold">
@@ -76,7 +76,7 @@ export default function Index() {
                 <Link to="/profile" className="flex items-center gap-3">
                   <Avatar className="h-12 w-12 ring-2 ring-primary/20">
                     <AvatarImage src={profile.avatar_url || ''} alt={profile.display_name} />
-                    <AvatarFallback>{profile.display_name[0]}</AvatarFallback>
+                    <AvatarFallback>{profile.display_name?.[0] || '?'}</AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-semibold">{profile.display_name}</p>

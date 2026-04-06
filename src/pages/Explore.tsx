@@ -20,24 +20,20 @@ export default function Explore() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const { data: posts, isLoading: postsLoading } = usePosts();
-  const { data: profiles, isLoading: profilesLoading } = useProfiles();
+  const { data: profiles, isLoading: profilesLoading } = useProfiles(searchQuery);
 
   const filteredPosts = posts?.filter(post => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || 
-      post.skill_offered.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.skill_wanted.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.description.toLowerCase().includes(searchQuery.toLowerCase());
+      post.skill_offered.toLowerCase().includes(q) ||
+      post.skill_wanted.toLowerCase().includes(q) ||
+      post.description.toLowerCase().includes(q) ||
+      post.profiles?.display_name?.toLowerCase().includes(q) ||
+      post.profiles?.username?.toLowerCase().includes(q);
     const matchesSkill = !selectedSkill ||
       post.skill_offered.toLowerCase().includes(selectedSkill.toLowerCase()) ||
       post.skill_wanted.toLowerCase().includes(selectedSkill.toLowerCase());
     return matchesSearch && matchesSkill;
-  });
-
-  const filteredProfiles = profiles?.filter(profile => {
-    if (!searchQuery) return true;
-    return profile.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      profile.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      profile.skills_teaching.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
   return (
@@ -114,9 +110,9 @@ export default function Explore() {
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
               </div>
-            ) : filteredProfiles && filteredProfiles.length > 0 ? (
+            ) : profiles && profiles.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredProfiles.map((profile) => (
+                {profiles.map((profile) => (
                   <UserCard key={profile.id} profile={profile} />
                 ))}
               </div>
