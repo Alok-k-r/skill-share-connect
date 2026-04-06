@@ -69,25 +69,25 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 overflow-y-auto">
+      <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center shadow-lg mx-auto mb-4">
-            <ArrowRightLeft className="h-8 w-8 text-primary-foreground" />
+          <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center shadow-lg mx-auto mb-3">
+            <ArrowRightLeft className="h-7 w-7 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold gradient-text">SkillSwap</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl font-bold gradient-text">SkillSwap</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             {isLogin ? 'Sign in to exchange skills' : 'Create your account'}
           </p>
         </div>
 
         {/* Form */}
-        <div className="bg-card rounded-2xl border p-6 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-card rounded-2xl border p-5 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {!isLogin && (
               <>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="displayName">Display Name</Label>
                   <Input
                     id="displayName"
@@ -97,7 +97,7 @@ export default function Auth() {
                     required={!isLogin}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="username">Username</Label>
                   <Input
                     id="username"
@@ -110,7 +110,7 @@ export default function Auth() {
               </>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -122,7 +122,7 @@ export default function Auth() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
@@ -149,7 +149,7 @@ export default function Auth() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm">
+          <div className="mt-4 text-center text-sm">
             <span className="text-muted-foreground">
               {isLogin ? "Don't have an account? " : 'Already have an account? '}
             </span>

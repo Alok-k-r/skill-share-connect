@@ -44,7 +44,7 @@ export default function Profile() {
             <div className="relative">
               <Avatar className="h-28 w-28 sm:h-36 sm:w-36 ring-4 ring-primary/20">
                 <AvatarImage src={profile.avatar_url || ''} alt={profile.display_name} />
-                <AvatarFallback className="text-3xl">{profile.display_name[0]}</AvatarFallback>
+                <AvatarFallback className="text-3xl">{profile.display_name?.[0] || '?'}</AvatarFallback>
               </Avatar>
               <button className="absolute bottom-1 right-1 w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-md">
                 <Edit2 className="h-4 w-4 text-primary-foreground" />

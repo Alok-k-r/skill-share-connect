@@ -35,7 +35,7 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
         <Link to={`/user/${post.profiles.username}`} className="flex items-center gap-3">
           <Avatar className="h-10 w-10 ring-2 ring-primary/20">
             <AvatarImage src={post.profiles.avatar_url || ''} alt={post.profiles.display_name} />
-            <AvatarFallback>{post.profiles.display_name[0]}</AvatarFallback>
+            <AvatarFallback>{post.profiles.display_name?.[0] || '?'}</AvatarFallback>
           </Avatar>
           <div>
             <p className="font-semibold hover:text-primary transition-colors">
