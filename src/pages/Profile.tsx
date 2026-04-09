@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Settings, Grid3X3, Bookmark, Heart, Edit2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -7,13 +8,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SkillPostCard } from '@/components/posts/SkillPostCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserPosts } from '@/hooks/usePosts';
+import { useSavedPosts } from '@/hooks/useSavedPosts';
+import { useLikedPosts } from '@/hooks/useLikedPosts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { FollowersModal } from '@/components/profile/FollowersModal';
+import { toast } from '@/hooks/use-toast';
 
 export default function Profile() {
-  const { profile, user } = useAuth();
+  const { profile, user, signOut } = useAuth();
   const { data: userPosts, isLoading } = useUserPosts(user?.id);
+  const { data: savedPosts, isLoading: savedLoading } = useSavedPosts();
+  const { data: likedPosts, isLoading: likedLoading } = useLikedPosts();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [followersModal, setFollowersModal] = useState<{ open: boolean; type: 'followers' | 'following' }>({ open: false, type: 'followers' });
 
   const { data: stats } = useQuery({
     queryKey: ['profile-stats', user?.id],
@@ -46,7 +56,10 @@ export default function Profile() {
                 <AvatarImage src={profile.avatar_url || ''} alt={profile.display_name} />
                 <AvatarFallback className="text-3xl">{profile.display_name?.[0] || '?'}</AvatarFallback>
               </Avatar>
-              <button className="absolute bottom-1 right-1 w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-md">
+              <button
+                onClick={() => setIsEditOpen(true)}
+                className="absolute bottom-1 right-1 w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-md"
+              >
                 <Edit2 className="h-4 w-4 text-primary-foreground" />
               </button>
             </div>
@@ -55,8 +68,8 @@ export default function Profile() {
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 mb-4">
                 <h1 className="text-2xl font-bold">{profile.display_name}</h1>
                 <div className="flex gap-2">
-                  <Button variant="gradient" size="sm">Edit Profile</Button>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Button variant="gradient" size="sm" onClick={() => setIsEditOpen(true)}>Edit Profile</Button>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={signOut} title="Sign out">
                     <Settings className="h-4 w-4" />
                   </Button>
                 </div>
@@ -67,14 +80,14 @@ export default function Profile() {
                   <p className="font-bold text-xl">{stats?.posts_count || 0}</p>
                   <p className="text-sm text-muted-foreground">posts</p>
                 </div>
-                <div className="text-center sm:text-left">
+                <button onClick={() => setFollowersModal({ open: true, type: 'followers' })} className="text-center sm:text-left hover:opacity-70 transition-opacity">
                   <p className="font-bold text-xl">{(stats?.followers_count || 0).toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">followers</p>
-                </div>
-                <div className="text-center sm:text-left">
+                </button>
+                <button onClick={() => setFollowersModal({ open: true, type: 'following' })} className="text-center sm:text-left hover:opacity-70 transition-opacity">
                   <p className="font-bold text-xl">{stats?.following_count || 0}</p>
                   <p className="text-sm text-muted-foreground">following</p>
-                </div>
+                </button>
               </div>
 
               <p className="text-muted-foreground mb-4">@{profile.username}</p>
@@ -140,23 +153,49 @@ export default function Profile() {
             )}
           </TabsContent>
 
-          <TabsContent value="saved">
-            <div className="text-center py-12">
-              <Bookmark className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No saved posts yet</h2>
-              <p className="text-muted-foreground">Posts you save will appear here</p>
-            </div>
+          <TabsContent value="saved" className="space-y-6">
+            {savedLoading ? (
+              <Skeleton className="h-48 rounded-2xl" />
+            ) : savedPosts && savedPosts.length > 0 ? (
+              savedPosts.map((post, index) => (
+                <SkillPostCard key={post.id} post={post} index={index} />
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <Bookmark className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">No saved posts yet</h2>
+                <p className="text-muted-foreground">Posts you save will appear here</p>
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="liked">
-            <div className="text-center py-12">
-              <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No liked posts yet</h2>
-              <p className="text-muted-foreground">Posts you like will appear here</p>
-            </div>
+          <TabsContent value="liked" className="space-y-6">
+            {likedLoading ? (
+              <Skeleton className="h-48 rounded-2xl" />
+            ) : likedPosts && likedPosts.length > 0 ? (
+              likedPosts.map((post, index) => (
+                <SkillPostCard key={post.id} post={post} index={index} />
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">No liked posts yet</h2>
+                <p className="text-muted-foreground">Posts you like will appear here</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
+
+      <EditProfileModal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} />
+      {user && (
+        <FollowersModal
+          isOpen={followersModal.open}
+          onClose={() => setFollowersModal(prev => ({ ...prev, open: false }))}
+          userId={user.id}
+          type={followersModal.type}
+        />
+      )}
     </Layout>
   );
 }
