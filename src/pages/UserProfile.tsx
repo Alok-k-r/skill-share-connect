@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Grid3X3, MessageCircle } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,13 +12,18 @@ import { useFollowUser } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import { FollowersModal } from '@/components/profile/FollowersModal';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function UserProfile() {
   const { username } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfileByUsername(username);
   const { data: userPosts, isLoading: postsLoading } = useUserPosts(profile?.id);
   const followMutation = useFollowUser();
+  const [followersModal, setFollowersModal] = useState<{ open: boolean; type: 'followers' | 'following' }>({ open: false, type: 'followers' });
+  const [messagingLoading, setMessagingLoading] = useState(false);
 
   const handleFollow = () => {
     if (!user || !profile) return;
@@ -35,6 +40,36 @@ export default function UserProfile() {
         },
       }
     );
+  };
+
+  const handleMessage = async () => {
+    if (!user || !profile) return;
+    setMessagingLoading(true);
+    try {
+      // Check if conversation already exists
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(user1_id.eq.${user.id},user2_id.eq.${profile.id}),and(user1_id.eq.${profile.id},user2_id.eq.${user.id})`)
+        .maybeSingle();
+
+      if (existing) {
+        navigate('/messages');
+        return;
+      }
+
+      // Create new conversation
+      const { error } = await supabase
+        .from('conversations')
+        .insert({ user1_id: user.id, user2_id: profile.id });
+
+      if (error) throw error;
+      navigate('/messages');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setMessagingLoading(false);
+    }
   };
 
   if (profileLoading) {
@@ -65,7 +100,7 @@ export default function UserProfile() {
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <Avatar className="h-28 w-28 sm:h-36 sm:w-36 ring-4 ring-primary/20">
               <AvatarImage src={profile.avatar_url || ''} alt={profile.display_name} />
-              <AvatarFallback className="text-3xl">{profile.display_name[0]}</AvatarFallback>
+              <AvatarFallback className="text-3xl">{profile.display_name?.[0] || '?'}</AvatarFallback>
             </Avatar>
 
             <div className="flex-1 text-center sm:text-left">
@@ -80,9 +115,9 @@ export default function UserProfile() {
                     >
                       {profile.is_following ? 'Following' : 'Follow'}
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={handleMessage} disabled={messagingLoading}>
                       <MessageCircle className="h-4 w-4 mr-2" />
-                      Message
+                      {messagingLoading ? 'Opening...' : 'Message'}
                     </Button>
                   </div>
                 )}
@@ -93,14 +128,14 @@ export default function UserProfile() {
                   <p className="font-bold text-xl">{profile.posts_count}</p>
                   <p className="text-sm text-muted-foreground">posts</p>
                 </div>
-                <div className="text-center sm:text-left">
+                <button onClick={() => setFollowersModal({ open: true, type: 'followers' })} className="text-center sm:text-left hover:opacity-70 transition-opacity">
                   <p className="font-bold text-xl">{profile.followers_count.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">followers</p>
-                </div>
-                <div className="text-center sm:text-left">
+                </button>
+                <button onClick={() => setFollowersModal({ open: true, type: 'following' })} className="text-center sm:text-left hover:opacity-70 transition-opacity">
                   <p className="font-bold text-xl">{profile.following_count}</p>
                   <p className="text-sm text-muted-foreground">following</p>
-                </div>
+                </button>
               </div>
 
               <p className="text-muted-foreground mb-4">@{profile.username}</p>
@@ -153,6 +188,13 @@ export default function UserProfile() {
           )}
         </div>
       </div>
+
+      <FollowersModal
+        isOpen={followersModal.open}
+        onClose={() => setFollowersModal(prev => ({ ...prev, open: false }))}
+        userId={profile.id}
+        type={followersModal.type}
+      />
     </Layout>
   );
 }

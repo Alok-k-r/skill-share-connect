@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, ArrowRightLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PostWithProfile } from '@/hooks/usePosts';
 import { useToggleLike } from '@/hooks/usePosts';
+import { useToggleSave, useSavedPostIds } from '@/hooks/useSavedPosts';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 interface SkillPostCardProps {
   post: PostWithProfile;
@@ -18,11 +19,34 @@ interface SkillPostCardProps {
 export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
   const { user } = useAuth();
   const toggleLike = useToggleLike();
-  const [isSaved, setIsSaved] = useState(false);
+  const toggleSave = useToggleSave();
+  const { data: savedIds } = useSavedPostIds();
+
+  const isSaved = savedIds?.has(post.id) || false;
 
   const handleLike = () => {
     if (!user) return;
     toggleLike.mutate({ postId: post.id, userId: user.id, isLiked: post.is_liked });
+  };
+
+  const handleSave = () => {
+    if (!user) return;
+    toggleSave.mutate({ postId: post.id, userId: user.id, isSaved });
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/user/${post.profiles.username}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${post.profiles.display_name} - Skill Exchange`, text: post.description, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({ title: 'Link copied!', description: 'Post link has been copied to clipboard.' });
+      }
+    } catch {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied!', description: 'Post link has been copied to clipboard.' });
+    }
   };
 
   return (
@@ -93,7 +117,7 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
           <Button variant="ghost" size="icon" className="rounded-full">
             <MessageCircle className="h-6 w-6" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={handleShare}>
             <Share2 className="h-6 w-6" />
           </Button>
         </div>
@@ -101,7 +125,8 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
           variant="ghost"
           size="icon"
           className="rounded-full"
-          onClick={() => setIsSaved(!isSaved)}
+          onClick={handleSave}
+          disabled={!user}
         >
           <Bookmark
             className={cn(
