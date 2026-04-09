@@ -1,7 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+
+let sharedNotificationsChannel: ReturnType<typeof supabase.channel> | null = null;
+let sharedNotificationsUserId: string | null = null;
+let notificationsSubscriberCount = 0;
+
+const removeSharedNotificationsChannel = async () => {
+  if (!sharedNotificationsChannel) return;
+
+  await supabase.removeChannel(sharedNotificationsChannel);
+  sharedNotificationsChannel = null;
+  sharedNotificationsUserId = null;
+};
 
 export interface NotificationWithActor {
   id: string;
@@ -23,7 +35,6 @@ export interface NotificationWithActor {
 export function useNotifications() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const query = useQuery({
     queryKey: ['notifications'],
@@ -63,30 +74,43 @@ export function useNotifications() {
   useEffect(() => {
     if (!user) return;
 
-    // Clean up any existing channel
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
+    notificationsSubscriberCount += 1;
+
+    const channelName = `notifications-realtime-${user.id}`;
+
+    if (sharedNotificationsChannel && sharedNotificationsUserId !== user.id) {
+      void removeSharedNotificationsChannel();
     }
 
-    const channel = supabase
-      .channel(`notif-${user.id}-${Date.now()}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      })
-      .subscribe();
+    if (!sharedNotificationsChannel) {
+      const existingChannel = supabase
+        .getChannels()
+        .find((channel) => channel.topic === `realtime:${channelName}`);
 
-    channelRef.current = channel;
+      if (existingChannel) {
+        void supabase.removeChannel(existingChannel);
+      }
+
+      sharedNotificationsChannel = supabase
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        }, () => {
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        })
+        .subscribe();
+
+      sharedNotificationsUserId = user.id;
+    }
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+      notificationsSubscriberCount = Math.max(notificationsSubscriberCount - 1, 0);
+
+      if (notificationsSubscriberCount === 0) {
+        void removeSharedNotificationsChannel();
       }
     };
   }, [user?.id, queryClient]);
