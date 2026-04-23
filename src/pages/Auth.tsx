@@ -69,8 +69,9 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 overflow-y-auto">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen w-full bg-background overflow-y-auto">
+      <div className="min-h-screen flex items-start sm:items-center justify-center px-4 py-6 sm:py-10">
+        <div className="w-full max-w-md space-y-5 my-auto">
         {/* Logo */}
         <div className="text-center">
           <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center shadow-lg mx-auto mb-3">
@@ -160,6 +161,7 @@ export default function Auth() {
               {isLogin ? 'Sign Up' : 'Sign In'}
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

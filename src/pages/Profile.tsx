@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Settings, Grid3X3, Bookmark, Heart, Edit2 } from 'lucide-react';
+import { Settings, Grid3X3, Bookmark, Heart, Edit2, LogOut, User } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Layout } from '@/components/layout/Layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -69,9 +76,34 @@ export default function Profile() {
                 <h1 className="text-2xl font-bold">{profile.display_name}</h1>
                 <div className="flex gap-2">
                   <Button variant="gradient" size="sm" onClick={() => setIsEditOpen(true)}>Edit Profile</Button>
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={signOut} title="Sign out">
-                    <Settings className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-9 w-9" title="Settings">
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-card z-50">
+                      <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                        <User className="h-4 w-4 mr-2" />
+                        Edit Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          try {
+                            await signOut();
+                            toast({ title: 'Signed out', description: 'You have been signed out.' });
+                          } catch (e: any) {
+                            toast({ title: 'Error', description: e.message, variant: 'destructive' });
+                          }
+                        }}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
