@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, ArrowRightLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,7 +10,8 @@ import { useToggleSave, useSavedPostIds } from '@/hooks/useSavedPosts';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
+import { CommentsDialog } from './CommentsDialog';
+import { SharePostDialog } from './SharePostDialog';
 
 interface SkillPostCardProps {
   post: PostWithProfile;
@@ -21,8 +23,12 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
   const { data: savedIds } = useSavedPostIds();
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const isSaved = savedIds?.has(post.id) || false;
+  const postUrl = `${window.location.origin}/user/${post.profiles.username}`;
+  const shareText = `${post.profiles.display_name} wants to swap "${post.skill_offered}" for "${post.skill_wanted}" on SkillSwap`;
 
   const handleLike = () => {
     if (!user) return;
@@ -32,21 +38,6 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
   const handleSave = () => {
     if (!user) return;
     toggleSave.mutate({ postId: post.id, userId: user.id, isSaved });
-  };
-
-  const handleShare = async () => {
-    const url = `${window.location.origin}/user/${post.profiles.username}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: `${post.profiles.display_name} - Skill Exchange`, text: post.description, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast({ title: 'Link copied!', description: 'Post link has been copied to clipboard.' });
-      }
-    } catch {
-      await navigator.clipboard.writeText(url);
-      toast({ title: 'Link copied!', description: 'Post link has been copied to clipboard.' });
-    }
   };
 
   return (
@@ -114,10 +105,10 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
               )}
             />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setCommentsOpen(true)}>
             <MessageCircle className="h-6 w-6" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-full" onClick={handleShare}>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShareOpen(true)}>
             <Share2 className="h-6 w-6" />
           </Button>
         </div>
@@ -146,13 +137,25 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
           </Link>{' '}
           {post.description}
         </p>
-        <button className="text-sm text-muted-foreground mt-2 hover:text-foreground transition-colors">
+        <button
+          onClick={() => setCommentsOpen(true)}
+          className="text-sm text-muted-foreground mt-2 hover:text-foreground transition-colors"
+        >
           View all {post.comments_count} comments
         </button>
         <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide">
           {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
         </p>
       </div>
+
+      <CommentsDialog open={commentsOpen} onOpenChange={setCommentsOpen} postId={post.id} />
+      <SharePostDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        postId={post.id}
+        postUrl={postUrl}
+        shareText={shareText}
+      />
     </article>
   );
 }
