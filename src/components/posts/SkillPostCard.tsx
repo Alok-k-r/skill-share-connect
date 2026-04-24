@@ -159,10 +159,3 @@ export function SkillPostCard({ post, index = 0 }: SkillPostCardProps) {
     </article>
   );
 }
-        <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wide">
-          {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-        </p>
-      </div>
-    </article>
-  );
-}
