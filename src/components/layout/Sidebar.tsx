@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { CreatePostModal } from '@/components/posts/CreatePostModal';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Home' },
+  { to: '/home', icon: Home, label: 'Home' },
   { to: '/explore', icon: Compass, label: 'Explore' },
   { to: '/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/notifications', icon: Bell, label: 'Notifications' },
@@ -26,7 +26,7 @@ export function Sidebar() {
   return (
     <>
       <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 xl:w-72 border-r bg-card p-4">
-        <Link to="/" className="flex items-center gap-3 px-3 py-4 mb-4">
+        <Link to="/home" className="flex items-center gap-3 px-3 py-4 mb-4">
           <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center shadow-md">
             <span className="text-primary-foreground font-bold text-2xl">S</span>
           </div>

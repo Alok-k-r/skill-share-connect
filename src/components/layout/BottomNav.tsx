@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { CreatePostModal } from '@/components/posts/CreatePostModal';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Home' },
+  { to: '/home', icon: Home, label: 'Home' },
   { to: '/explore', icon: Compass, label: 'Explore' },
   { to: '#create', icon: PlusSquare, label: 'Create', isAction: true },
   { to: '/messages', icon: MessageCircle, label: 'Messages' },
