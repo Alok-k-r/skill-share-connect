@@ -27,7 +27,7 @@ export function Header() {
       <header className="sticky top-0 z-50 glass border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/home" className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-md">
                 <span className="text-primary-foreground font-bold text-xl">S</span>
               </div>
@@ -108,7 +108,7 @@ export function Header() {
         <div className="fixed inset-0 z-40 bg-background/95 backdrop-blur-sm sm:hidden animate-fade-in">
           <div className="pt-20 px-6">
             <nav className="space-y-2">
-              <MobileNavLink to="/" onClick={() => setIsMobileMenuOpen(false)}>Home</MobileNavLink>
+              <MobileNavLink to="/home" onClick={() => setIsMobileMenuOpen(false)}>Home</MobileNavLink>
               <MobileNavLink to="/explore" onClick={() => setIsMobileMenuOpen(false)}>Explore</MobileNavLink>
               <MobileNavLink to="/messages" onClick={() => setIsMobileMenuOpen(false)}>Messages</MobileNavLink>
               <MobileNavLink to="/profile" onClick={() => setIsMobileMenuOpen(false)}>Profile</MobileNavLink>

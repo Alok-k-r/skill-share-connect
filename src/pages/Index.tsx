@@ -18,25 +18,15 @@ export default function Index() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Feed */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Welcome Banner - Desktop Only */}
-            {profile && (
-              <div className="hidden lg:block bg-card rounded-2xl border p-6 animate-fade-in">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16 ring-4 ring-primary/20">
-                    <AvatarImage src={profile.avatar_url || ''} alt={profile.display_name} />
-                    <AvatarFallback>{profile.display_name?.[0] || '?'}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h1 className="text-2xl font-bold">
-                      Welcome back, {profile.display_name.split(' ')[0]}! 👋
-                    </h1>
-                    <p className="text-muted-foreground">
-                      Ready to exchange some skills today?
-                    </p>
-                  </div>
-                </div>
+            {/* Page header */}
+            <div className="hidden lg:flex items-end justify-between animate-fade-in">
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight">Your Feed</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Discover skills the community is exchanging today.
+                </p>
               </div>
-            )}
+            </div>
 
             {/* Posts */}
             <div className="space-y-6">
