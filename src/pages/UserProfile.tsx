@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Grid3X3, MessageCircle } from 'lucide-react';
+import { Grid3X3, MessageCircle, Phone, Video } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { FollowersModal } from '@/components/profile/FollowersModal';
 import { supabase } from '@/integrations/supabase/client';
+import { useCall } from '@/hooks/useCall';
 
 export default function UserProfile() {
   const { username } = useParams();
@@ -24,6 +25,11 @@ export default function UserProfile() {
   const followMutation = useFollowUser();
   const [followersModal, setFollowersModal] = useState<{ open: boolean; type: 'followers' | 'following' }>({ open: false, type: 'followers' });
   const [messagingLoading, setMessagingLoading] = useState(false);
+  const { startCall } = useCall();
+
+  const callPeer = profile
+    ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url }
+    : null;
 
   const handleFollow = () => {
     if (!user || !profile) return;
@@ -118,6 +124,12 @@ export default function UserProfile() {
                     <Button variant="outline" onClick={handleMessage} disabled={messagingLoading}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       {messagingLoading ? 'Opening...' : 'Message'}
+                    </Button>
+                    <Button variant="outline" size="icon" aria-label="Voice call" onClick={() => callPeer && startCall(callPeer, 'voice')}>
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" aria-label="Video call" onClick={() => callPeer && startCall(callPeer, 'video')}>
+                      <Video className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
