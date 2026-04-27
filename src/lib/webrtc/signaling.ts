@@ -10,7 +10,6 @@ export function userChannelName(userId: string) {
 
 /**
  * Subscribe to incoming signaling messages for a user.
- * Returns the channel and an unsubscribe function.
  */
 export function subscribeSignals(
   userId: string,
@@ -23,12 +22,15 @@ export function subscribeSignals(
   channel
     .on('broadcast', { event: EVENT }, ({ payload }) => {
       try {
+        console.log('[signaling] ◀ recv', (payload as SignalEvent)?.type, payload);
         onEvent(payload as SignalEvent);
       } catch (err) {
         console.error('[signaling] handler error', err);
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log('[signaling] listener', userChannelName(userId), status);
+    });
 
   return {
     channel,
@@ -39,19 +41,63 @@ export function subscribeSignals(
 }
 
 /**
- * Send a signaling event to a target user. Uses a short-lived sender channel
- * so we do not interfere with the recipient's listener channel.
+ * Long-lived sender channel cache keyed by target user. Reusing the same
+ * channel keeps message ordering and avoids tearing down before ICE
+ * candidates flush — which was the root cause of frequent "stuck on
+ * connecting" failures.
  */
-export async function sendSignal(toUserId: string, payload: SignalEvent): Promise<void> {
-  const ch = supabase.channel(userChannelName(toUserId), {
+const senderCache = new Map<
+  string,
+  { channel: RealtimeChannel; ready: Promise<void> }
+>();
+
+function getSender(toUserId: string) {
+  const cached = senderCache.get(toUserId);
+  if (cached) return cached;
+
+  const channel = supabase.channel(userChannelName(toUserId), {
     config: { broadcast: { self: false, ack: true } },
   });
-  await new Promise<void>((resolve) => {
-    ch.subscribe((status) => {
-      if (status === 'SUBSCRIBED') resolve();
+
+  const ready = new Promise<void>((resolve, reject) => {
+    let settled = false;
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED' && !settled) {
+        settled = true;
+        resolve();
+      } else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !settled) {
+        settled = true;
+        reject(new Error(`signaling channel ${status}`));
+      }
     });
   });
-  await ch.send({ type: 'broadcast', event: EVENT, payload });
-  // Tear down the sender channel; recipient channel stays alive elsewhere.
-  setTimeout(() => supabase.removeChannel(ch), 500);
+
+  const entry = { channel, ready };
+  senderCache.set(toUserId, entry);
+  return entry;
+}
+
+export async function sendSignal(toUserId: string, payload: SignalEvent): Promise<void> {
+  const { channel, ready } = getSender(toUserId);
+  try {
+    await ready;
+  } catch (err) {
+    console.warn('[signaling] sender not ready, recreating', err);
+    senderCache.delete(toUserId);
+    const fresh = getSender(toUserId);
+    await fresh.ready;
+    await fresh.channel.send({ type: 'broadcast', event: EVENT, payload });
+    console.log('[signaling] ▶ sent', payload.type, '→', toUserId);
+    return;
+  }
+  await channel.send({ type: 'broadcast', event: EVENT, payload });
+  console.log('[signaling] ▶ sent', payload.type, '→', toUserId);
+}
+
+export function disposeSender(toUserId: string) {
+  const entry = senderCache.get(toUserId);
+  if (entry) {
+    supabase.removeChannel(entry.channel);
+    senderCache.delete(toUserId);
+  }
 }

@@ -4,6 +4,7 @@ export interface PeerCallbacks {
   onRemoteStream: (stream: MediaStream) => void;
   onIceCandidate: (candidate: RTCIceCandidateInit) => void;
   onConnectionStateChange: (state: RTCPeerConnectionState) => void;
+  onIceConnectionStateChange?: (state: RTCIceConnectionState) => void;
 }
 
 /**
@@ -20,50 +21,98 @@ export class PeerConnection {
     this.remoteStream = new MediaStream();
 
     this.pc.ontrack = (ev) => {
-      ev.streams[0]?.getTracks().forEach((t) => {
-        if (!this.remoteStream.getTracks().find((x) => x.id === t.id)) {
-          this.remoteStream.addTrack(t);
-        }
-      });
+      console.log('[webrtc] ◀ ontrack', ev.track.kind, 'streams=', ev.streams.length);
+      // Prefer the stream object that arrives with the event when present
+      const incoming = ev.streams[0];
+      if (incoming) {
+        incoming.getTracks().forEach((t) => {
+          if (!this.remoteStream.getTracks().find((x) => x.id === t.id)) {
+            this.remoteStream.addTrack(t);
+          }
+        });
+      } else if (!this.remoteStream.getTracks().find((x) => x.id === ev.track.id)) {
+        this.remoteStream.addTrack(ev.track);
+      }
       this.cb.onRemoteStream(this.remoteStream);
     };
 
     this.pc.onicecandidate = (ev) => {
-      if (ev.candidate) this.cb.onIceCandidate(ev.candidate.toJSON());
+      if (ev.candidate) {
+        console.log('[webrtc] ▶ ice candidate', ev.candidate.candidate);
+        this.cb.onIceCandidate(ev.candidate.toJSON());
+      } else {
+        console.log('[webrtc] ice gathering complete');
+      }
     };
 
     this.pc.onconnectionstatechange = () => {
+      console.log('[webrtc] connectionState →', this.pc.connectionState);
       this.cb.onConnectionStateChange(this.pc.connectionState);
+    };
+
+    this.pc.oniceconnectionstatechange = () => {
+      console.log('[webrtc] iceConnectionState →', this.pc.iceConnectionState);
+      this.cb.onIceConnectionStateChange?.(this.pc.iceConnectionState);
+    };
+
+    this.pc.onicegatheringstatechange = () => {
+      console.log('[webrtc] iceGatheringState →', this.pc.iceGatheringState);
+    };
+
+    this.pc.onsignalingstatechange = () => {
+      console.log('[webrtc] signalingState →', this.pc.signalingState);
     };
   }
 
   static async getUserMedia(kind: CallKind): Promise<MediaStream> {
-    return navigator.mediaDevices.getUserMedia({
-      audio: true,
+    console.log('[webrtc] requesting user media', kind);
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
       video: kind === 'video' ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
     });
+    console.log(
+      '[webrtc] media obtained: audio=',
+      stream.getAudioTracks().length,
+      'video=',
+      stream.getVideoTracks().length
+    );
+    return stream;
   }
 
   attachLocalStream(stream: MediaStream) {
     this.localStream = stream;
-    stream.getTracks().forEach((track) => this.pc.addTrack(track, stream));
+    stream.getTracks().forEach((track) => {
+      console.log('[webrtc] addTrack', track.kind, 'enabled=', track.enabled);
+      this.pc.addTrack(track, stream);
+    });
   }
 
   async createOffer(): Promise<RTCSessionDescriptionInit> {
-    const offer = await this.pc.createOffer();
+    const offer = await this.pc.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true,
+    });
     await this.pc.setLocalDescription(offer);
+    console.log('[webrtc] offer created & set local');
     return offer;
   }
 
   async createAnswer(remoteOffer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
     await this.pc.setRemoteDescription(new RTCSessionDescription(remoteOffer));
+    console.log('[webrtc] remote offer set');
     const answer = await this.pc.createAnswer();
     await this.pc.setLocalDescription(answer);
+    console.log('[webrtc] answer created & set local');
     return answer;
   }
 
   async setRemoteAnswer(answer: RTCSessionDescriptionInit) {
     await this.pc.setRemoteDescription(new RTCSessionDescription(answer));
+    console.log('[webrtc] remote answer set');
   }
 
   async addIceCandidate(c: RTCIceCandidateInit) {
@@ -91,6 +140,9 @@ export class PeerConnection {
     this.pc.onicecandidate = null;
     this.pc.ontrack = null;
     this.pc.onconnectionstatechange = null;
+    this.pc.oniceconnectionstatechange = null;
+    this.pc.onicegatheringstatechange = null;
+    this.pc.onsignalingstatechange = null;
     this.pc.close();
   }
 }
