@@ -175,8 +175,8 @@ export default function Messages() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => handleCallUnavailable('voice')}><Phone className="h-5 w-5" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleCallUnavailable('video')}><Video className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleStartCall('voice')} aria-label="Voice call"><Phone className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleStartCall('video')} aria-label="Video call"><Video className="h-5 w-5" /></Button>
                   <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
                 </div>
               </div>
