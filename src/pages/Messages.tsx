@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Send, Phone, Video, MoreVertical, ArrowLeft } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useConversations, useMessages, useSendMessage, ConversationWithProfile } from '@/hooks/useConversations';
+import { useConversations, useMessages, useSendMessage, useMarkConversationRead, ConversationWithProfile } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -16,7 +17,33 @@ export default function Messages() {
   const [selectedConversation, setSelectedConversation] = useState<ConversationWithProfile | null>(null);
   const { data: chatMessages } = useMessages(selectedConversation?.id);
   const sendMessage = useSendMessage();
+  const markRead = useMarkConversationRead();
   const [newMessage, setNewMessage] = useState('');
+
+  // Mark conversation as read when opened
+  useEffect(() => {
+    if (selectedConversation && user) {
+      markRead.mutate({ conversationId: selectedConversation.id, userId: user.id });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversation?.id, user?.id]);
+
+  // Hardware/browser back button: close open chat instead of leaving page
+  useEffect(() => {
+    if (!selectedConversation) return;
+    window.history.pushState({ chatOpen: true }, '');
+    const onPop = () => setSelectedConversation(null);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [selectedConversation?.id]);
+
+  const closeChat = () => {
+    if (window.history.state?.chatOpen) {
+      window.history.back();
+    } else {
+      setSelectedConversation(null);
+    }
+  };
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +54,13 @@ export default function Messages() {
       content: newMessage.trim(),
     });
     setNewMessage('');
+  };
+
+  const handleCallUnavailable = (kind: 'voice' | 'video') => {
+    toast({
+      title: `${kind === 'voice' ? 'Voice' : 'Video'} calls coming soon`,
+      description: 'Real-time calling needs WebRTC + a signaling/TURN server. Send a chat message in the meantime!',
+    });
   };
 
   if (!user) {
@@ -120,7 +154,7 @@ export default function Messages() {
                     variant="ghost"
                     size="icon"
                     className="md:hidden"
-                    onClick={() => setSelectedConversation(null)}
+                    onClick={closeChat}
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
@@ -134,8 +168,8 @@ export default function Messages() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon"><Phone className="h-5 w-5" /></Button>
-                  <Button variant="ghost" size="icon"><Video className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleCallUnavailable('voice')}><Phone className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleCallUnavailable('video')}><Video className="h-5 w-5" /></Button>
                   <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
                 </div>
               </div>
@@ -151,7 +185,7 @@ export default function Messages() {
                           ? "gradient-primary text-primary-foreground rounded-br-sm"
                           : "bg-muted rounded-bl-sm"
                       )}>
-                        <p className="text-sm">{msg.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                         <p className={cn(
                           "text-xs mt-1",
                           isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
