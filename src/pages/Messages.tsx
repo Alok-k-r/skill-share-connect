@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
+import { useCall } from '@/hooks/useCall';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -18,6 +18,7 @@ export default function Messages() {
   const { data: chatMessages } = useMessages(selectedConversation?.id);
   const sendMessage = useSendMessage();
   const markRead = useMarkConversationRead();
+  const { startCall } = useCall();
   const [newMessage, setNewMessage] = useState('');
 
   // Mark conversation as read when opened
@@ -56,11 +57,17 @@ export default function Messages() {
     setNewMessage('');
   };
 
-  const handleCallUnavailable = (kind: 'voice' | 'video') => {
-    toast({
-      title: `${kind === 'voice' ? 'Voice' : 'Video'} calls coming soon`,
-      description: 'Real-time calling needs WebRTC + a signaling/TURN server. Send a chat message in the meantime!',
-    });
+  const handleStartCall = (kind: 'voice' | 'video') => {
+    if (!selectedConversation) return;
+    startCall(
+      {
+        id: selectedConversation.other_user.id,
+        display_name: selectedConversation.other_user.display_name,
+        username: selectedConversation.other_user.username,
+        avatar_url: selectedConversation.other_user.avatar_url,
+      },
+      kind
+    );
   };
 
   if (!user) {
