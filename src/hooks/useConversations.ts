@@ -130,6 +130,24 @@ export function useSendMessage() {
   });
 }
 
+export function useMarkConversationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ conversationId, userId }: { conversationId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('conversation_id', conversationId)
+        .eq('is_read', false)
+        .neq('sender_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
 export function useFollowUser() {
   const queryClient = useQueryClient();
 
