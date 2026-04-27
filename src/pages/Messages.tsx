@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { useCall } from '@/hooks/useCall';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CallHistoryList } from '@/components/calls/CallHistoryList';
 
 export default function Messages() {
   const { user } = useAuth();
@@ -97,55 +99,66 @@ export default function Messages() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 p-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-full" />
-                  </div>
-                </div>
-              ))
-            ) : conversations && conversations.length > 0 ? (
-              conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors text-left",
-                    selectedConversation?.id === conv.id && "bg-muted"
-                  )}
-                >
-                  <div className="relative">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={conv.other_user.avatar_url || ''} alt={conv.other_user.display_name} />
-                      <AvatarFallback>{conv.other_user.display_name[0]}</AvatarFallback>
-                    </Avatar>
-                    {conv.unread_count > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full gradient-primary text-xs text-primary-foreground flex items-center justify-center font-medium">
-                        {conv.unread_count}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold truncate">{conv.other_user.display_name}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
-                      </span>
+          <Tabs defaultValue="chats" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="mx-4 mt-3 grid grid-cols-2">
+              <TabsTrigger value="chats">Chats</TabsTrigger>
+              <TabsTrigger value="calls">Calls</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="chats" className="flex-1 overflow-y-auto m-0">
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-4">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-full" />
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{conv.last_message}</p>
                   </div>
-                </button>
-              ))
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                No conversations yet
-              </div>
-            )}
-          </div>
+                ))
+              ) : conversations && conversations.length > 0 ? (
+                conversations.map((conv) => (
+                  <button
+                    key={conv.id}
+                    onClick={() => setSelectedConversation(conv)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors text-left",
+                      selectedConversation?.id === conv.id && "bg-muted"
+                    )}
+                  >
+                    <div className="relative">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={conv.other_user.avatar_url || ''} alt={conv.other_user.display_name} />
+                        <AvatarFallback>{conv.other_user.display_name[0]}</AvatarFallback>
+                      </Avatar>
+                      {conv.unread_count > 0 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full gradient-primary text-xs text-primary-foreground flex items-center justify-center font-medium">
+                          {conv.unread_count}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold truncate">{conv.other_user.display_name}</p>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">{conv.last_message}</p>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  No conversations yet
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="calls" className="flex-1 overflow-y-auto m-0">
+              <CallHistoryList />
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Chat Area */}
