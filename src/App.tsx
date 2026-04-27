@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { CallProvider } from "@/hooks/useCall";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Welcome from "./pages/Welcome";
@@ -24,18 +25,20 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Welcome />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/home" element={<Index />} />
-            <Route path="/explore" element={<Explore />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/user/:username" element={<UserProfile />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <CallProvider>
+            <Routes>
+              <Route path="/" element={<Welcome />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/home" element={<Index />} />
+              <Route path="/explore" element={<Explore />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/user/:username" element={<UserProfile />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </CallProvider>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
